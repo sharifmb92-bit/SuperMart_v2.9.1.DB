@@ -1,6 +1,6 @@
 {
   "id": "./index.html",
-  "name": "SuperMart_v 2.9.0",
+  "name": "SuperMart_v 2.9.1",
   "short_name": "SuperMart",
   "description": "Calculadora de compras real en tiempo real. Controla tu presupuesto, evita duplicados y gestiona tu historial de compras.",
   "start_url": "./index.html",
