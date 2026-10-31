@@ -480,14 +480,14 @@
 </script>
 
 <script>
-    // --- AUTO-LIMPIEZA FORZADA DE CACHÉ VIEJA Y URL #CARRO (v2.9.0) ---
+    // --- AUTO-LIMPIEZA FORZADA DE CACHÉ VIEJA Y URL (v2.9.1) ---
     (function() {
         if (window.location.hash) {
             history.replaceState(null, null, window.location.pathname + window.location.search);
         }
 
         const VER_KEY = 'supermart_version_instalada';
-        const VERSION_ACTUAL = '2.9.0_clean';
+        const VERSION_ACTUAL = '2.9.1_clean';
 
         if (localStorage.getItem(VER_KEY) !== VERSION_ACTUAL) {
             if ('caches' in window) {
