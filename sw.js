@@ -1,30 +1,31 @@
 const CACHE_NAME = 'supermart-v2-9-1';
-
-const STATIC_ASSETS = [
+const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './sw.js',
   './icon-192.png',
   './icon-512.png'
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(
-        STATIC_ASSETS.map((url) => new Request(url, { cache: 'reload' }))
-      );
+// 1. Instalación e intercepción inmediata
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
+// 2. Activación: Elimina la caché v2.4.0 y cualquier versión previa
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => {
       return Promise.all(
-        keys.map((key) => {
+        keys.map(key => {
           if (key !== CACHE_NAME) {
+            console.log('Eliminando caché antigua:', key);
             return caches.delete(key);
           }
         })
@@ -34,45 +35,26 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || event.request.url.includes('firestore.googleapis.com')) {
-    return;
-  }
+// 3. Fetch: Estrategia Network-First para archivos HTML/JS (Garantiza siempre la última versión)
+self.addEventListener('fetch', e => {
+  // Ignorar peticiones que no sean GET
+  if (e.request.method !== 'GET') return;
 
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((networkResponse) => {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+  e.respondWith(
+    fetch(e.request)
+      .then(networkResponse => {
+        // Si hay red, actualiza la caché con la respuesta fresca de GitHub
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(e.request, responseClone);
           });
-          return networkResponse;
-        })
-        .catch(() => {
-          return caches.match(event.request).then((cached) => {
-            return cached || caches.match('./index.html');
-          });
-        })
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200) {
-          return networkResponse;
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
         return networkResponse;
-      });
-    })
+      })
+      .catch(() => {
+        // Si no hay red (modo offline), usa la copia en caché
+        return caches.match(e.request);
+      })
   );
 });
